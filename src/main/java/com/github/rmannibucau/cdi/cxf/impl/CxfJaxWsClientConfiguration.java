@@ -1,9 +1,14 @@
 package com.github.rmannibucau.cdi.cxf.impl;
 
+import com.github.rmannibucau.cdi.cxf.api.CxfFeature;
+import com.github.rmannibucau.cdi.cxf.api.CxfInFaultInterceptor;
 import com.github.rmannibucau.cdi.cxf.api.CxfInInterceptor;
 import com.github.rmannibucau.cdi.cxf.api.CxfJaxWSClient;
+import com.github.rmannibucau.cdi.cxf.api.CxfOutFaultInterceptor;
+import com.github.rmannibucau.cdi.cxf.api.CxfOutInterceptor;
 import com.github.rmannibucau.cdi.cxf.api.NotSpecified;
 import com.github.rmannibucau.cdi.cxf.api.Property;
+import org.apache.cxf.feature.Feature;
 import org.apache.cxf.interceptor.Interceptor;
 import org.apache.cxf.message.Message;
 import org.apache.xbean.recipe.ObjectRecipe;
@@ -34,6 +39,10 @@ public class CxfJaxWsClientConfiguration {
     private String password;
     private Map<String, Object> properties;
     private List<Interceptor<? extends Message>> inInterceptors;
+    private List<Interceptor<? extends Message>> outInterceptors;
+    private List<Interceptor<? extends Message>> inFaultInterceptors;
+    private List<Interceptor<? extends Message>> outFaultInterceptors;
+    private List<Feature> features;
 
     public CxfJaxWsClientConfiguration(final CxfJaxWSClient annotation) {
         lazy = annotation.lazy();
@@ -43,7 +52,7 @@ public class CxfJaxWsClientConfiguration {
         username = annotation.username();
         password = annotation.password();
 
-        readProperties(annotation.properties());
+        properties = readProperties(annotation.properties());
 
         replaceEmptyByNull();
     }
@@ -172,30 +181,90 @@ public class CxfJaxWsClientConfiguration {
         return properties;
     }
 
-    public void addInterceptor(final CxfInInterceptor inInterceptor) {
+    public void addOutInterceptor(final CxfOutInterceptor interceptor) {
+        if (outInterceptors == null) {
+            outInterceptors = new ArrayList<Interceptor<? extends Message>>();
+        }
+
+        outInterceptors.add((Interceptor<? extends Message>) instantiate(interceptor.clazz(), interceptor.classname(),
+                interceptor.properties(), interceptor.propertyFile(), interceptor.prefix()));
+    }
+
+    public void addInInterceptor(final CxfInInterceptor interceptor) {
         if (inInterceptors == null) {
             inInterceptors = new ArrayList<Interceptor<? extends Message>>();
         }
 
-        Class<?> clazz = inInterceptor.clazz();
+        inInterceptors.add((Interceptor<? extends Message>) instantiate(interceptor.clazz(), interceptor.classname(),
+                    interceptor.properties(), interceptor.propertyFile(), interceptor.prefix()));
+    }
+
+    public void addInFaultInterceptor(final CxfInFaultInterceptor interceptor) {
+        if (inFaultInterceptors == null) {
+            inFaultInterceptors = new ArrayList<Interceptor<? extends Message>>();
+        }
+
+        inFaultInterceptors.add((Interceptor<? extends Message>) instantiate(interceptor.clazz(), interceptor.classname(),
+                interceptor.properties(), interceptor.propertyFile(), interceptor.prefix()));
+    }
+
+    public void addOutFaultInterceptor(final CxfOutFaultInterceptor interceptor) {
+        if (outFaultInterceptors == null) {
+            outFaultInterceptors = new ArrayList<Interceptor<? extends Message>>();
+        }
+
+        outFaultInterceptors.add((Interceptor<? extends Message>) instantiate(interceptor.clazz(), interceptor.classname(),
+                interceptor.properties(), interceptor.propertyFile(), interceptor.prefix()));
+    }
+
+    public void addFeature(final CxfFeature feature) {
+        if (features == null) {
+            features = new ArrayList<Feature>();
+        }
+
+        features.add((Feature) instantiate(feature.clazz(), feature.classname(),
+                feature.properties(), feature.propertyFile(), feature.prefix()));
+    }
+
+    public List<Interceptor<? extends Message>> getInInterceptors() {
+        return inInterceptors;
+    }
+
+    public List<Interceptor<? extends Message>> getOutInterceptors() {
+        return outInterceptors;
+    }
+
+    public List<Interceptor<? extends Message>> getInFaultInterceptors() {
+        return inFaultInterceptors;
+    }
+
+    public List<Interceptor<? extends Message>> getOutFaultInterceptors() {
+        return outFaultInterceptors;
+    }
+
+    public List<? extends Feature> getFeatures() {
+        return features;
+    }
+
+    private static Object instantiate(final Class<?> inClazz, final String alternativeClassName, final Property[] properties, final String propPath, final String prefix) {
+        Class<?> clazz = inClazz;
         if (NotSpecified.class == clazz) {
             try {
-                clazz = ClassLoaders.current().loadClass(inInterceptor.classname());
+                clazz = ClassLoaders.current().loadClass(alternativeClassName);
             } catch (ClassNotFoundException e) {
                 clazz = null;
-                LOGGER.log(Level.SEVERE, "Can't load " + inInterceptor.classname(), e);
+                LOGGER.log(Level.SEVERE, "Can't load " + alternativeClassName, e);
             }
         }
 
         if (clazz != null) {
             final Map<String, Object> attributes = new HashMap<String, Object>();
-            for (Property property : inInterceptor.properties()) {
+            for (Property property : properties) {
                 attributes.put(property.key(), property.value());
             }
 
-            final Map<String, Object> fileProps = readProperties(inInterceptor.propertyFile());
+            final Map<String, Object> fileProps = readProperties(propPath);
             if (fileProps != null) {
-                final String prefix = inInterceptor.prefix();
                 final int len = prefix.length();
                 for (Map.Entry<String, Object> entry : fileProps.entrySet()) {
                     String key = entry.getKey();
@@ -206,12 +275,9 @@ public class CxfJaxWsClientConfiguration {
                 }
             }
 
-            final Object instance = new ObjectRecipe(clazz, attributes).create();
-            inInterceptors.add((Interceptor<? extends Message>) instance);
+            return new ObjectRecipe(clazz, attributes).create();
         }
-    }
 
-    public List<Interceptor<? extends Message>> getInInterceptors() {
-        return inInterceptors;
+        throw new IllegalArgumentException("Can't instantiate " + alternativeClassName);
     }
 }

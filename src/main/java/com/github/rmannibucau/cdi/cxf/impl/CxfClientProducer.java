@@ -1,8 +1,16 @@
 package com.github.rmannibucau.cdi.cxf.impl;
 
+import com.github.rmannibucau.cdi.cxf.api.CxfFeature;
+import com.github.rmannibucau.cdi.cxf.api.CxfFeatures;
+import com.github.rmannibucau.cdi.cxf.api.CxfInFaultInterceptor;
+import com.github.rmannibucau.cdi.cxf.api.CxfInFaultInterceptors;
 import com.github.rmannibucau.cdi.cxf.api.CxfInInterceptor;
 import com.github.rmannibucau.cdi.cxf.api.CxfInInterceptors;
 import com.github.rmannibucau.cdi.cxf.api.CxfJaxWSClient;
+import com.github.rmannibucau.cdi.cxf.api.CxfOutFaultInterceptor;
+import com.github.rmannibucau.cdi.cxf.api.CxfOutFaultInterceptors;
+import com.github.rmannibucau.cdi.cxf.api.CxfOutInterceptor;
+import com.github.rmannibucau.cdi.cxf.api.CxfOutInterceptors;
 import org.apache.cxf.endpoint.Client;
 import org.apache.cxf.frontend.ClientProxy;
 import org.apache.cxf.jaxws.JaxWsProxyFactoryBean;
@@ -31,7 +39,35 @@ public class CxfClientProducer {
         final CxfInInterceptors inInterceptors = annotated.getAnnotation(CxfInInterceptors.class);
         if (inInterceptors != null) {
             for (CxfInInterceptor interceptor : inInterceptors.value()) {
-                configuration.addInterceptor(interceptor);
+                configuration.addInInterceptor(interceptor);
+            }
+        }
+
+        final CxfOutInterceptors outInterceptors = annotated.getAnnotation(CxfOutInterceptors.class);
+        if (inInterceptors != null) {
+            for (CxfOutInterceptor interceptor : outInterceptors.value()) {
+                configuration.addOutInterceptor(interceptor);
+            }
+        }
+
+        final CxfInFaultInterceptors infaultInterceptors = annotated.getAnnotation(CxfInFaultInterceptors.class);
+        if (infaultInterceptors != null) {
+            for (CxfInFaultInterceptor interceptor : infaultInterceptors.value()) {
+                configuration.addInFaultInterceptor(interceptor);
+            }
+        }
+
+        final CxfOutFaultInterceptors outFaultInterceptors = annotated.getAnnotation(CxfOutFaultInterceptors.class);
+        if (inInterceptors != null) {
+            for (CxfOutFaultInterceptor interceptor : outFaultInterceptors.value()) {
+                configuration.addOutFaultInterceptor(interceptor);
+            }
+        }
+
+        final CxfFeatures features = annotated.getAnnotation(CxfFeatures.class);
+        if (inInterceptors != null) {
+            for (CxfFeature feature : features.value()) {
+                configuration.addFeature(feature);
             }
         }
 
@@ -62,8 +98,18 @@ public class CxfClientProducer {
             if (configuration.getInInterceptors() != null) {
                 factory.setInInterceptors(configuration.getInInterceptors());
             }
-
-            // TODO: interceptors etc http://cxf.apache.org/docs/jax-ws-configuration.html
+            if (configuration.getInFaultInterceptors() != null) {
+                factory.setInFaultInterceptors(configuration.getInFaultInterceptors());
+            }
+            if (configuration.getOutFaultInterceptors() != null) {
+                factory.setOutInterceptors(configuration.getOutInterceptors());
+            }
+            if (configuration.getOutFaultInterceptors() != null) {
+                factory.setOutFaultInterceptors(configuration.getOutFaultInterceptors());
+            }
+            if (configuration.getFeatures() != null) {
+                factory.setFeatures(configuration.getFeatures());
+            }
 
             try {
                 delegate = factory.create(configuration.getServiceClass());
