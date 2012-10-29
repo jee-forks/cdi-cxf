@@ -57,7 +57,7 @@ public class CxfClientProducer {
         final CxfJaxWSClient annotation = annotated.getAnnotation(CxfJaxWSClient.class);
 
         final CxfJaxWsClientConfiguration configuration = new CxfJaxWsClientConfiguration(annotation.lazy(), annotation.wsdl(),
-                parseQName(annotation.qname()), annotation.address(), annotation.username(), annotation.password(),
+                parseQName(placeHolders(annotation.qname())), annotation.address(), annotation.username(), annotation.password(),
                 annotation.keyStoreType(), annotation.keyManagerFactoryAlgorithm(), annotation.keyStorePassword(),
                 annotation.keyStoreFile(), annotation.trustStoreAlgorithm(), annotation.trustStoreFile(),
                 readProperties(annotation.properties()));
@@ -242,7 +242,7 @@ public class CxfClientProducer {
         private void buildDelegate() {
             final JaxWsProxyFactoryBean factory = new JaxWsProxyFactoryBean();
             factory.setServiceClass(configuration.getServiceClass());
-            factory.setWsdlURL(configuration.getWsdl());
+            factory.setWsdlURL(placeHolders(configuration.getWsdl()));
             factory.setServiceName(configuration.getQname());
             factory.setAddress(configuration.getAddress());
             factory.setUsername(configuration.getUsername());
