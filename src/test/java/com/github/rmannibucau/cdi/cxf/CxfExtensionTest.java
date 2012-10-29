@@ -3,7 +3,6 @@ package com.github.rmannibucau.cdi.cxf;
 import com.github.rmannibucau.cdi.cxf.api.CxfInInterceptor;
 import com.github.rmannibucau.cdi.cxf.api.CxfInInterceptors;
 import com.github.rmannibucau.cdi.cxf.api.CxfJaxWSClient;
-import com.github.rmannibucau.cdi.cxf.api.Property;
 import com.github.rmannibucau.cdi.cxf.bean.MyWebService;
 import com.github.rmannibucau.cdi.cxf.bean.MyWebService2;
 import com.github.rmannibucau.cdi.cxf.impl.CxfClientProducer;

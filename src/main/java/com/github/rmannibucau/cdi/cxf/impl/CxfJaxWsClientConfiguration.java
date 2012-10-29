@@ -1,42 +1,30 @@
 package com.github.rmannibucau.cdi.cxf.impl;
 
-import com.github.rmannibucau.cdi.cxf.api.CxfFeature;
-import com.github.rmannibucau.cdi.cxf.api.CxfInFaultInterceptor;
-import com.github.rmannibucau.cdi.cxf.api.CxfInInterceptor;
-import com.github.rmannibucau.cdi.cxf.api.CxfJaxWSClient;
-import com.github.rmannibucau.cdi.cxf.api.CxfOutFaultInterceptor;
-import com.github.rmannibucau.cdi.cxf.api.CxfOutInterceptor;
-import com.github.rmannibucau.cdi.cxf.api.NotSpecified;
-import com.github.rmannibucau.cdi.cxf.api.Property;
 import org.apache.cxf.feature.Feature;
 import org.apache.cxf.interceptor.Interceptor;
 import org.apache.cxf.message.Message;
-import org.apache.xbean.recipe.ObjectRecipe;
 
 import javax.xml.namespace.QName;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class CxfJaxWsClientConfiguration {
-    private static final Logger LOGGER = Logger.getLogger(CxfJaxWsClientConfiguration.class.getName());
-
     private boolean lazy = false;
     private String wsdl = null;
     private QName qname;
     private Class<?> serviceClass;
     private String address;
+
     private String username;
     private String password;
+
+    private String keyStoreType;
+    private String keyManagerFactoryAlgorithm;
+    private String keyStorePassword;
+    private String keyStoreFile;
+    private String trustStoreFile;
+    private String trustStoreAlgorithm;
+
     private Map<String, Object> properties;
     private List<Interceptor<? extends Message>> inInterceptors;
     private List<Interceptor<? extends Message>> outInterceptors;
@@ -44,80 +32,27 @@ public class CxfJaxWsClientConfiguration {
     private List<Interceptor<? extends Message>> outFaultInterceptors;
     private List<Feature> features;
 
-    public CxfJaxWsClientConfiguration(final CxfJaxWSClient annotation) {
-        lazy = annotation.lazy();
-        wsdl = annotation.wsdl();
-        qname = parseQName(annotation.qname());
-        address = annotation.address();
-        username = annotation.username();
-        password = annotation.password();
-
-        properties = readProperties(annotation.properties());
+    public CxfJaxWsClientConfiguration(final boolean lazy, final String wsdl, final QName qname, final String address,
+                                       final String username, final String password,
+                                       final String keyStoreType, final String keyManagerFactoryAlgorithm,
+                                       final String keyStorePassword, final String keyStoreFile,
+                                       final String trustStoreAlgorithm, final String trustStoreFile,
+                                       final Map<String, Object> properties) {
+        this.lazy = lazy;
+        this.wsdl = wsdl;
+        this.qname = qname;
+        this.address = address;
+        this.username = username;
+        this.password = password;
+        this.keyStoreType = keyStoreType;
+        this.keyManagerFactoryAlgorithm = keyManagerFactoryAlgorithm;
+        this.keyStorePassword = keyStorePassword;
+        this.keyStoreFile = keyStoreFile;
+        this.trustStoreAlgorithm = trustStoreAlgorithm;
+        this.trustStoreFile = trustStoreFile;
+        this.properties = properties;
 
         replaceEmptyByNull();
-    }
-
-    private static Map<String, Object> readProperties(final String propPath) {
-        if (propPath == null || propPath.isEmpty()) {
-            return null;
-        }
-
-        final String realPath = placeHolders(propPath);
-
-        final ClassLoader cl = ClassLoaders.current();
-        InputStream is = cl.getResourceAsStream(realPath);
-        if (is == null) {
-            final File file = new File(realPath);
-            if (file.exists()) {
-                try {
-                    is = new FileInputStream(file);
-                } catch (FileNotFoundException e) {
-                    LOGGER.log(Level.SEVERE, "Can't read file " + realPath);
-                }
-            }
-        }
-
-        if (is != null) {
-            final Properties prop = new Properties();
-            try {
-                prop.load(is);
-            } catch (IOException e) {
-                LOGGER.log(Level.SEVERE, "Can't load file " + realPath);
-            }
-            if (prop.size() > 0) {
-                final Map<String, Object> properties = new HashMap<String, Object>();
-                for (Map.Entry<Object, Object> entry : prop.entrySet()) {
-                    properties.put(entry.getKey().toString(), entry.getValue());
-                }
-                return properties;
-            }
-        } else {
-            LOGGER.log(Level.SEVERE, "Can't find " + propPath);
-        }
-
-        return null;
-    }
-
-    private static String placeHolders(final String value) {
-        String path = value;
-        int start = path.indexOf("${");
-        int end = path.indexOf("}", Math.max(start, 0));
-        if (start >= 0 && end > 0) {
-            do {
-                final String key = path.substring(start + 2, end);
-                final String prop = System.getProperty(key);
-                if (prop == null) {
-                    LOGGER.warning("can't find property " + key);
-                    break;
-                }
-
-                path = path.replace(path.substring(start, end + 1), prop);
-
-                start = path.indexOf("${");
-                end = path.indexOf("}", Math.max(start, 0));
-            } while (start > 0 && end > 0);
-        }
-        return path;
     }
 
     private void replaceEmptyByNull() {
@@ -130,19 +65,21 @@ public class CxfJaxWsClientConfiguration {
         if (password.isEmpty()) {
             password = null;
         }
-    }
-
-    private QName parseQName(final String qname) {
-        if (qname.isEmpty()) {
-            return null;
+        if (keyManagerFactoryAlgorithm.isEmpty()) {
+            keyManagerFactoryAlgorithm = null;
         }
-
-        final int start = qname.indexOf("{");
-        final int end = qname.indexOf("}");
-        if (start < 0 || end < 0) {
-            return new QName(qname);
+        if (keyStoreFile.isEmpty()) {
+            keyStoreFile = null;
         }
-        return new QName(qname.substring(start + 1, end), qname.substring(end + 1));
+        if (keyStoreType.isEmpty()) {
+            keyStoreType = null;
+        }
+        if (trustStoreAlgorithm.isEmpty()) {
+            trustStoreAlgorithm = null;
+        }
+        if (trustStoreFile.isEmpty()) {
+            trustStoreFile = null;
+        }
     }
 
     public boolean isLazy() {
@@ -181,51 +118,6 @@ public class CxfJaxWsClientConfiguration {
         return properties;
     }
 
-    public void addOutInterceptor(final CxfOutInterceptor interceptor) {
-        if (outInterceptors == null) {
-            outInterceptors = new ArrayList<Interceptor<? extends Message>>();
-        }
-
-        outInterceptors.add((Interceptor<? extends Message>) instantiate(interceptor.clazz(), interceptor.classname(),
-                interceptor.properties(), interceptor.propertyFile(), interceptor.prefix()));
-    }
-
-    public void addInInterceptor(final CxfInInterceptor interceptor) {
-        if (inInterceptors == null) {
-            inInterceptors = new ArrayList<Interceptor<? extends Message>>();
-        }
-
-        inInterceptors.add((Interceptor<? extends Message>) instantiate(interceptor.clazz(), interceptor.classname(),
-                    interceptor.properties(), interceptor.propertyFile(), interceptor.prefix()));
-    }
-
-    public void addInFaultInterceptor(final CxfInFaultInterceptor interceptor) {
-        if (inFaultInterceptors == null) {
-            inFaultInterceptors = new ArrayList<Interceptor<? extends Message>>();
-        }
-
-        inFaultInterceptors.add((Interceptor<? extends Message>) instantiate(interceptor.clazz(), interceptor.classname(),
-                interceptor.properties(), interceptor.propertyFile(), interceptor.prefix()));
-    }
-
-    public void addOutFaultInterceptor(final CxfOutFaultInterceptor interceptor) {
-        if (outFaultInterceptors == null) {
-            outFaultInterceptors = new ArrayList<Interceptor<? extends Message>>();
-        }
-
-        outFaultInterceptors.add((Interceptor<? extends Message>) instantiate(interceptor.clazz(), interceptor.classname(),
-                interceptor.properties(), interceptor.propertyFile(), interceptor.prefix()));
-    }
-
-    public void addFeature(final CxfFeature feature) {
-        if (features == null) {
-            features = new ArrayList<Feature>();
-        }
-
-        features.add((Feature) instantiate(feature.clazz(), feature.classname(),
-                feature.properties(), feature.propertyFile(), feature.prefix()));
-    }
-
     public List<Interceptor<? extends Message>> getInInterceptors() {
         return inInterceptors;
     }
@@ -246,38 +138,95 @@ public class CxfJaxWsClientConfiguration {
         return features;
     }
 
-    private static Object instantiate(final Class<?> inClazz, final String alternativeClassName, final Property[] properties, final String propPath, final String prefix) {
-        Class<?> clazz = inClazz;
-        if (NotSpecified.class == clazz) {
-            try {
-                clazz = ClassLoaders.current().loadClass(alternativeClassName);
-            } catch (ClassNotFoundException e) {
-                clazz = null;
-                LOGGER.log(Level.SEVERE, "Can't load " + alternativeClassName, e);
-            }
-        }
+    public boolean hasSSL() {
+        return false;
+    }
 
-        if (clazz != null) {
-            final Map<String, Object> attributes = new HashMap<String, Object>();
-            for (Property property : properties) {
-                attributes.put(property.key(), property.value());
-            }
+    public void setInInterceptors(final List<Interceptor<? extends Message>> inInterceptors) {
+        this.inInterceptors = inInterceptors;
+    }
 
-            final Map<String, Object> fileProps = readProperties(propPath);
-            if (fileProps != null) {
-                final int len = prefix.length();
-                for (Map.Entry<String, Object> entry : fileProps.entrySet()) {
-                    String key = entry.getKey();
-                    if (key.startsWith(prefix)) {
-                        key = key.substring(len);
-                        attributes.put(key, entry.getValue());
-                    }
-                }
-            }
+    public void setOutInterceptors(final List<Interceptor<? extends Message>> outInterceptors) {
+        this.outInterceptors = outInterceptors;
+    }
 
-            return new ObjectRecipe(clazz, attributes).create();
-        }
+    public void setInFaultInterceptors(final List<Interceptor<? extends Message>> inFaultInterceptors) {
+        this.inFaultInterceptors = inFaultInterceptors;
+    }
 
-        throw new IllegalArgumentException("Can't instantiate " + alternativeClassName);
+    public void setOutFaultInterceptors(final List<Interceptor<? extends Message>> outFaultInterceptors) {
+        this.outFaultInterceptors = outFaultInterceptors;
+    }
+
+    public void setFeatures(final List<Feature> features) {
+        this.features = features;
+    }
+
+    public void addInInterceptor(final Interceptor<? extends Message> interceptor) {
+        inInterceptors.add(interceptor);
+    }
+
+    public void addInFaultInterceptor(final Interceptor<? extends Message> interceptor) {
+        inFaultInterceptors.add(interceptor);
+    }
+
+    public void addOutInterceptor(final Interceptor<? extends Message> interceptor) {
+        outInterceptors.add(interceptor);
+    }
+
+    public void addOutFaultInterceptor(final Interceptor<? extends Message> interceptor) {
+        outFaultInterceptors.add(interceptor);
+    }
+
+    public void addFeature(final Feature feature) {
+        features.add(feature);
+    }
+
+    public String getKeyStoreType() {
+        return keyStoreType;
+    }
+
+    public void setKeyStoreType(final String keyStoreType) {
+        this.keyStoreType = keyStoreType;
+    }
+
+    public String getKeyManagerFactoryAlgorithm() {
+        return keyManagerFactoryAlgorithm;
+    }
+
+    public void setKeyManagerFactoryAlgorithm(final String keyManagerFactoryAlgorithm) {
+        this.keyManagerFactoryAlgorithm = keyManagerFactoryAlgorithm;
+    }
+
+    public String getKeyStorePassword() {
+        return keyStorePassword;
+    }
+
+    public void setKeyStorePassword(final String keyStorePassword) {
+        this.keyStorePassword = keyStorePassword;
+    }
+
+    public String getKeyStoreFile() {
+        return keyStoreFile;
+    }
+
+    public void setKeyStoreFile(final String keyStoreFile) {
+        this.keyStoreFile = keyStoreFile;
+    }
+
+    public String getTrustStoreFile() {
+        return trustStoreFile;
+    }
+
+    public void setTrustStoreFile(final String trustStoreFile) {
+        this.trustStoreFile = trustStoreFile;
+    }
+
+    public String getTrustStoreAlgorithm() {
+        return trustStoreAlgorithm;
+    }
+
+    public void setTrustStoreAlgorithm(final String trustStoreAlgorithm) {
+        this.trustStoreAlgorithm = trustStoreAlgorithm;
     }
 }

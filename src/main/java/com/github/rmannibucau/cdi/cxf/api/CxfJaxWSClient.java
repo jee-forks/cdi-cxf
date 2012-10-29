@@ -36,4 +36,22 @@ public @interface CxfJaxWSClient {
 
     @Nonbinding
     String properties() default "";
+
+    @Nonbinding
+    String keyStoreType() default "";
+
+    @Nonbinding
+    String keyManagerFactoryAlgorithm() default "";
+
+    @Nonbinding
+    String keyStorePassword() default "";
+
+    @Nonbinding
+    String keyStoreFile() default "";
+
+    @Nonbinding
+    String trustStoreFile() default "";
+
+    @Nonbinding
+    String trustStoreAlgorithm() default "";
 }
