@@ -22,6 +22,7 @@ import org.apache.cxf.jaxws.JaxWsProxyFactoryBean;
 import org.apache.cxf.message.Message;
 import org.apache.cxf.transport.http.HTTPConduit;
 import org.apache.xbean.recipe.ObjectRecipe;
+import org.apache.xbean.recipe.Option;
 
 import javax.enterprise.inject.Produces;
 import javax.enterprise.inject.spi.Annotated;
@@ -69,8 +70,8 @@ public class CxfClientProducer {
         if (inInterceptors != null) {
             configuration.setInInterceptors(new ArrayList<Interceptor<? extends Message>>());
             for (CxfInInterceptor interceptor : inInterceptors.value()) {
-                configuration.addInInterceptor((Interceptor<? extends Message>) instantiate(interceptor.clazz(), interceptor.classname(),
-                        interceptor.properties(), interceptor.propertyFile(), interceptor.prefix()));
+                configuration.addInInterceptor((Interceptor<? extends Message>) instantiate(interceptor.clazz(), interceptor.factoryMethod(),
+                        interceptor.classname(), interceptor.properties(), interceptor.propertyFile(), interceptor.prefix()));
             }
         }
 
@@ -78,8 +79,8 @@ public class CxfClientProducer {
         if (outInterceptors != null) {
             configuration.setOutInterceptors(new ArrayList<Interceptor<? extends Message>>());
             for (CxfOutInterceptor interceptor : outInterceptors.value()) {
-                configuration.addOutInterceptor((Interceptor<? extends Message>) instantiate(interceptor.clazz(), interceptor.classname(),
-                        interceptor.properties(), interceptor.propertyFile(), interceptor.prefix()));
+                configuration.addOutInterceptor((Interceptor<? extends Message>) instantiate(interceptor.clazz(), interceptor.factoryMethod(),
+                        interceptor.classname(), interceptor.properties(), interceptor.propertyFile(), interceptor.prefix()));
             }
         }
 
@@ -87,8 +88,8 @@ public class CxfClientProducer {
         if (infaultInterceptors != null) {
             configuration.setInFaultInterceptors(new ArrayList<Interceptor<? extends Message>>());
             for (CxfInFaultInterceptor interceptor : infaultInterceptors.value()) {
-                configuration.addInFaultInterceptor((Interceptor<? extends Message>) instantiate(interceptor.clazz(), interceptor.classname(),
-                        interceptor.properties(), interceptor.propertyFile(), interceptor.prefix()));
+                configuration.addInFaultInterceptor((Interceptor<? extends Message>) instantiate(interceptor.clazz(), interceptor.factoryMethod(),
+                        interceptor.classname(), interceptor.properties(), interceptor.propertyFile(), interceptor.prefix()));
             }
         }
 
@@ -96,8 +97,8 @@ public class CxfClientProducer {
         if (outFaultInterceptors != null) {
             configuration.setOutFaultInterceptors(new ArrayList<Interceptor<? extends Message>>());
             for (CxfOutFaultInterceptor interceptor : outFaultInterceptors.value()) {
-                configuration.addOutFaultInterceptor((Interceptor<? extends Message>) instantiate(interceptor.clazz(), interceptor.classname(),
-                        interceptor.properties(), interceptor.propertyFile(), interceptor.prefix()));
+                configuration.addOutFaultInterceptor((Interceptor<? extends Message>) instantiate(interceptor.clazz(), interceptor.factoryMethod(),
+                        interceptor.classname(), interceptor.properties(), interceptor.propertyFile(), interceptor.prefix()));
             }
         }
 
@@ -105,8 +106,8 @@ public class CxfClientProducer {
         if (features != null) {
             configuration.setFeatures(new ArrayList<Feature>());
             for (CxfFeature feature : features.value()) {
-                configuration.addFeature((Feature) instantiate(feature.clazz(), feature.classname(),
-                        feature.properties(), feature.propertyFile(), feature.prefix()));
+                configuration.addFeature((Feature) instantiate(feature.clazz(), feature.factoryMethod(),
+                        feature.classname(), feature.properties(), feature.propertyFile(), feature.prefix()));
             }
         }
 
@@ -126,7 +127,7 @@ public class CxfClientProducer {
         return new QName(qname.substring(start + 1, end), qname.substring(end + 1));
     }
 
-    private static Object instantiate(final Class<?> inClazz, final String alternativeClassName, final Property[] properties, final String propPath, final String prefix) {
+    private static Object instantiate(final Class<?> inClazz, final String factoryMethod, final String alternativeClassName, final Property[] properties, final String propPath, final String prefix) {
         Class<?> clazz = inClazz;
         if (NotSpecified.class == clazz) {
             try {
@@ -155,7 +156,18 @@ public class CxfClientProducer {
                 }
             }
 
-            return new ObjectRecipe(clazz, attributes).create();
+            final ObjectRecipe recipe;
+            if (!factoryMethod.isEmpty()) {
+                recipe = new ObjectRecipe(clazz, factoryMethod);
+            } else {
+                recipe = new ObjectRecipe(clazz);
+            }
+
+            recipe.allow(Option.CASE_INSENSITIVE_PROPERTIES);
+            recipe.allow(Option.IGNORE_MISSING_PROPERTIES);
+            recipe.setAllProperties(attributes);
+
+            return recipe.create();
         }
 
         throw new IllegalArgumentException("Can't instantiate " + alternativeClassName);

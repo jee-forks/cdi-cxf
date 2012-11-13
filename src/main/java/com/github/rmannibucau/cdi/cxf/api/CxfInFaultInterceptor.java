@@ -18,6 +18,9 @@ public @interface CxfInFaultInterceptor {
     String classname() default "";
 
     @Nonbinding
+    String factoryMethod() default "";
+
+    @Nonbinding
     Class<?> clazz() default NotSpecified.class;
 
     @Nonbinding
