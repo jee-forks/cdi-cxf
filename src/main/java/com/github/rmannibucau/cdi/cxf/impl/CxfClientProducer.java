@@ -267,7 +267,7 @@ public class CxfClientProducer {
             if (configuration.getInFaultInterceptors() != null) {
                 factory.setInFaultInterceptors(configuration.getInFaultInterceptors());
             }
-            if (configuration.getOutFaultInterceptors() != null) {
+            if (configuration.getOutInterceptors() != null) {
                 factory.setOutInterceptors(configuration.getOutInterceptors());
             }
             if (configuration.getOutFaultInterceptors() != null) {
